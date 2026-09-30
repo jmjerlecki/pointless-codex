@@ -693,6 +693,53 @@ fn internal_session_prompt_cache_key_is_scoped_to_parent_thread() {
 }
 
 #[test]
+fn prompt_cache_key_defaults_to_session_id_and_honors_override() {
+    let default_client = test_model_client(SessionSource::Exec);
+    let metadata = test_responses_metadata_for_client(
+        &default_client,
+        Some("turn-123"),
+        "window-1".to_string(),
+        /*parent_thread_id*/ None,
+        TestCodexResponsesRequestKind::Turn,
+    );
+    assert_eq!(
+        default_client.prompt_cache_key(&metadata),
+        metadata.session_id
+    );
+
+    let (tx_event, _rx_event) = async_channel::unbounded();
+    let no_override_client = test_model_client(SessionSource::Exec)
+        .with_session_context(/*prompt_cache_key_override*/ None, tx_event.clone());
+    let metadata = test_responses_metadata_for_client(
+        &no_override_client,
+        Some("turn-123"),
+        "window-1".to_string(),
+        /*parent_thread_id*/ None,
+        TestCodexResponsesRequestKind::Turn,
+    );
+    assert_eq!(
+        no_override_client.prompt_cache_key(&metadata),
+        no_override_client.state.thread_id.to_string()
+    );
+
+    let override_client = test_model_client(SessionSource::Exec).with_session_context(
+        Some("feed-trade:creator:v1".to_string()),
+        tx_event,
+    );
+    let metadata = test_responses_metadata_for_client(
+        &override_client,
+        Some("turn-123"),
+        "window-1".to_string(),
+        /*parent_thread_id*/ None,
+        TestCodexResponsesRequestKind::Turn,
+    );
+    assert_eq!(
+        override_client.prompt_cache_key(&metadata),
+        "feed-trade:creator:v1"
+    );
+}
+
+#[test]
 fn build_subagent_headers_sets_internal_memory_consolidation_label() {
     let client = test_model_client(SessionSource::Internal(
         InternalSessionSource::MemoryConsolidation,

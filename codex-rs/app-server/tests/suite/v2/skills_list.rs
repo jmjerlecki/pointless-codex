@@ -1392,6 +1392,7 @@ async fn skills_changed_notification_is_emitted_after_skill_change() -> Result<(
             history_mode: None,
             session_start_source: None,
             thread_source: None,
+            prompt_cache_key: None,
             project_id: None,
             dynamic_tools: None,
             environments: None,

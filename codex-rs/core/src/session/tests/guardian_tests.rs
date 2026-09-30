@@ -1310,6 +1310,7 @@ async fn guardian_subagent_does_not_inherit_parent_exec_policy_rules() {
         agent_control: AgentControl::default(),
         dynamic_tools: Vec::new(),
         metrics_service_name: None,
+        prompt_cache_key: None,
         inherited_environments: None,
         inherited_exec_policy: Some(Arc::new(parent_exec_policy)),
         parent_rollout_thread_trace: codex_rollout_trace::ThreadTraceContext::disabled(),

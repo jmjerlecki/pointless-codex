@@ -671,6 +671,7 @@ impl Session {
         multi_agent_version: Option<MultiAgentVersion>,
         git_enrichment_policy: GitEnrichmentPolicy,
         windows_sandbox_proxy_settings_mode: codex_sandboxing::WindowsSandboxProxySettingsMode,
+        prompt_cache_key: Option<String>,
     ) -> anyhow::Result<Arc<Self>> {
         debug!(
             "Configuring session: model={}; provider={:?}",
@@ -1470,10 +1471,13 @@ impl Session {
                 )
                 .with_free_guardian_enabled(config.free_guardian_enabled())
                 .with_session_context(
+                    // Guardian review sessions keep their internal key; otherwise a
+                    // client-supplied key (if any) replaces the default session-id key.
                     crate::guardian::prompt_cache_key_override_for_review_session(
                         &session_configuration.session_source,
                         session_configuration.parent_thread_id,
-                    ),
+                    )
+                    .or(prompt_cache_key),
                     tx_event.clone(),
                 ),
                 executed_tool_calls: executed_tool_calls.clone(),

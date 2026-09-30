@@ -917,6 +917,163 @@ async fn thread_start_without_selected_environment_includes_only_global_instruct
     Ok(())
 }
 
+async fn start_thread_without_environments(
+    mcp: &mut TestAppServer,
+    prompt_cache_key: Option<&str>,
+) -> Result<ThreadStartResponse> {
+    let request_id = mcp
+        .send_thread_start_request(ThreadStartParams {
+            environments: Some(Vec::new()),
+            prompt_cache_key: prompt_cache_key.map(str::to_string),
+            ..Default::default()
+        })
+        .await?;
+    timeout(DEFAULT_READ_TIMEOUT, mcp.read_response(request_id)).await?
+}
+
+async fn run_text_turn(mcp: &mut TestAppServer, thread_id: String, text: &str) -> Result<()> {
+    let turn_request_id = mcp
+        .send_turn_start_request(TurnStartParams {
+            thread_id,
+            input: vec![V2UserInput::Text {
+                text: text.to_string(),
+                text_elements: Vec::new(),
+            }],
+            ..Default::default()
+        })
+        .await?;
+    timeout(
+        DEFAULT_READ_TIMEOUT,
+        mcp.read_stream_until_response_message(RequestId::Integer(turn_request_id)),
+    )
+    .await??;
+    timeout(
+        DEFAULT_READ_TIMEOUT,
+        mcp.read_stream_until_notification_message("turn/completed"),
+    )
+    .await??;
+    Ok(())
+}
+
+/// Returns the `prompt_cache_key` of every `/responses` request whose body contains `marker`.
+async fn prompt_cache_keys_for_marker(server: &MockServer, marker: &str) -> Result<Vec<Value>> {
+    let requests = server
+        .received_requests()
+        .await
+        .context("failed to fetch received requests")?;
+    let mut keys = Vec::new();
+    for request in requests
+        .iter()
+        .filter(|request| request.url.path().ends_with("/responses"))
+    {
+        let body = request
+            .body_json::<Value>()
+            .context("model request body should be JSON")?;
+        if body.to_string().contains(marker) {
+            keys.push(body["prompt_cache_key"].clone());
+        }
+    }
+    anyhow::ensure!(!keys.is_empty(), "expected a model request containing {marker}");
+    Ok(keys)
+}
+
+#[tokio::test]
+async fn thread_start_without_prompt_cache_key_uses_session_id() -> Result<()> {
+    let server = create_mock_responses_server_repeating_assistant("Done").await;
+    let codex_home = TempDir::new()?;
+    create_config_toml_without_approval_policy(codex_home.path(), &server.uri())?;
+    let mut mcp = TestAppServer::builder()
+        .with_codex_home(codex_home.path())
+        .build_initialized()
+        .await?;
+
+    let ThreadStartResponse { thread, .. } =
+        start_thread_without_environments(&mut mcp, /*prompt_cache_key*/ None).await?;
+    run_text_turn(&mut mcp, thread.id.clone(), "default cache key probe").await?;
+
+    let keys = prompt_cache_keys_for_marker(&server, "default cache key probe").await?;
+    assert_eq!(keys, vec![json!(thread.session_id)]);
+    assert_eq!(thread.session_id, thread.id);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn thread_start_prompt_cache_key_is_sent_and_shared_across_fresh_threads() -> Result<()> {
+    const PROMPT_CACHE_KEY: &str = "feed-trade:creator-a:soul-v3";
+    let server = create_mock_responses_server_repeating_assistant("Done").await;
+    let codex_home = TempDir::new()?;
+    create_config_toml_without_approval_policy(codex_home.path(), &server.uri())?;
+    let mut mcp = TestAppServer::builder()
+        .with_codex_home(codex_home.path())
+        .build_initialized()
+        .await?;
+
+    let ThreadStartResponse {
+        thread: first_thread,
+        ..
+    } = start_thread_without_environments(&mut mcp, Some(PROMPT_CACHE_KEY)).await?;
+    run_text_turn(&mut mcp, first_thread.id.clone(), "first keyed probe").await?;
+    let ThreadStartResponse {
+        thread: second_thread,
+        ..
+    } = start_thread_without_environments(&mut mcp, Some(PROMPT_CACHE_KEY)).await?;
+    run_text_turn(&mut mcp, second_thread.id.clone(), "second keyed probe").await?;
+
+    assert_ne!(first_thread.id, second_thread.id);
+    assert_ne!(first_thread.session_id, second_thread.session_id);
+    assert_eq!(
+        prompt_cache_keys_for_marker(&server, "first keyed probe").await?,
+        vec![json!(PROMPT_CACHE_KEY)]
+    );
+    assert_eq!(
+        prompt_cache_keys_for_marker(&server, "second keyed probe").await?,
+        vec![json!(PROMPT_CACHE_KEY)]
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn thread_start_rejects_invalid_prompt_cache_key() -> Result<()> {
+    let server = create_mock_responses_server_repeating_assistant("Done").await;
+    let codex_home = TempDir::new()?;
+    create_config_toml_without_approval_policy(codex_home.path(), &server.uri())?;
+    let mut mcp = TestAppServer::builder()
+        .with_codex_home(codex_home.path())
+        .build_initialized()
+        .await?;
+
+    for (prompt_cache_key, expected_message) in [
+        ("   ".to_string(), "promptCacheKey must not be empty"),
+        (
+            "k".repeat(257),
+            "promptCacheKey must be at most 256 characters",
+        ),
+    ] {
+        let request_id = mcp
+            .send_thread_start_request(ThreadStartParams {
+                environments: Some(Vec::new()),
+                prompt_cache_key: Some(prompt_cache_key),
+                ..Default::default()
+            })
+            .await?;
+        let error: JSONRPCError = timeout(
+            DEFAULT_READ_TIMEOUT,
+            mcp.read_stream_until_error_message(RequestId::Integer(request_id)),
+        )
+        .await??;
+        assert_eq!(error.error.code, INVALID_REQUEST_ERROR_CODE);
+        assert_eq!(error.error.message, expected_message);
+    }
+
+    let ThreadStartResponse { thread, .. } =
+        start_thread_without_environments(&mut mcp, Some(&"k".repeat(256))).await?;
+    assert!(!thread.id.is_empty());
+
+    Ok(())
+}
+
 #[cfg(windows)]
 fn normalize_path_for_comparison(path: impl AsRef<Path>) -> PathBuf {
     let path = path.as_ref();

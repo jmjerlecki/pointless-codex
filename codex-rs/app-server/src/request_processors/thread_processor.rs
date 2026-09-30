@@ -279,6 +279,22 @@ fn has_permission_override(
         })
 }
 
+fn validate_prompt_cache_key(prompt_cache_key: Option<&str>) -> Result<(), JSONRPCErrorError> {
+    const PROMPT_CACHE_KEY_MAX_CHARS: usize = 256;
+    let Some(prompt_cache_key) = prompt_cache_key else {
+        return Ok(());
+    };
+    if prompt_cache_key.trim().is_empty() {
+        return Err(invalid_request("promptCacheKey must not be empty"));
+    }
+    if prompt_cache_key.chars().count() > PROMPT_CACHE_KEY_MAX_CHARS {
+        return Err(invalid_request(format!(
+            "promptCacheKey must be at most {PROMPT_CACHE_KEY_MAX_CHARS} characters"
+        )));
+    }
+    Ok(())
+}
+
 fn validate_dynamic_tools(tools: &[DynamicToolSpec]) -> Result<(), String> {
     const DYNAMIC_TOOL_NAME_MAX_LEN: usize = 128;
     const DYNAMIC_TOOL_NAMESPACE_MAX_LEN: usize = 64;
@@ -1139,9 +1155,11 @@ impl ThreadRequestProcessor {
             history_mode,
             session_start_source,
             thread_source,
+            prompt_cache_key,
             project_id,
             environments,
         } = params;
+        validate_prompt_cache_key(prompt_cache_key.as_deref())?;
         if matches!(
             history_mode,
             Some(codex_app_server_protocol::ThreadHistoryMode::Paginated)
@@ -1230,6 +1248,7 @@ impl ThreadRequestProcessor {
                 project_id,
                 environments,
                 service_name,
+                prompt_cache_key,
                 allow_provider_model_fallback,
                 experimental_raw_events,
                 request_trace,
@@ -1309,6 +1328,7 @@ impl ThreadRequestProcessor {
         project_id: Option<String>,
         environment_selections: Option<Vec<TurnEnvironmentSelection>>,
         service_name: Option<String>,
+        prompt_cache_key: Option<String>,
         allow_provider_model_fallback: bool,
         experimental_raw_events: bool,
         request_trace: Option<W3cTraceContext>,
@@ -1454,6 +1474,7 @@ impl ThreadRequestProcessor {
                 thread_source,
                 dynamic_tools,
                 metrics_service_name: service_name,
+                prompt_cache_key,
                 parent_trace: request_trace,
                 environments: Some(environments),
                 thread_extension_init,

@@ -397,6 +397,7 @@ Start a fresh thread when you need a new Codex conversation.
     "personality": "friendly",
     "serviceName": "my_app_server_client", // optional metrics tag (`service_name`)
     "sessionStartSource": "startup", // optional: "startup" (default) or "clear"
+    "promptCacheKey": "my-app:agent-v1", // optional Responses `prompt_cache_key` shared by threads started with it; defaults to the session id (1-256 chars, not persisted)
     // Experimental: requires opt-in
     "dynamicTools": [
         {
