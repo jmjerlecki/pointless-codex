@@ -973,7 +973,10 @@ async fn prompt_cache_keys_for_marker(server: &MockServer, marker: &str) -> Resu
             keys.push(body["prompt_cache_key"].clone());
         }
     }
-    anyhow::ensure!(!keys.is_empty(), "expected a model request containing {marker}");
+    anyhow::ensure!(
+        !keys.is_empty(),
+        "expected a model request containing {marker}"
+    );
     Ok(keys)
 }
 

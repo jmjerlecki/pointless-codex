@@ -722,10 +722,8 @@ fn prompt_cache_key_defaults_to_session_id_and_honors_override() {
         no_override_client.state.thread_id.to_string()
     );
 
-    let override_client = test_model_client(SessionSource::Exec).with_session_context(
-        Some("feed-trade:creator:v1".to_string()),
-        tx_event,
-    );
+    let override_client = test_model_client(SessionSource::Exec)
+        .with_session_context(Some("feed-trade:creator:v1".to_string()), tx_event);
     let metadata = test_responses_metadata_for_client(
         &override_client,
         Some("turn-123"),

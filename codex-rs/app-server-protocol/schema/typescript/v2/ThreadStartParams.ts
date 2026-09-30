@@ -16,4 +16,11 @@ export type ThreadStartParams = {model?: string | null, modelProvider?: string |
 approvalsReviewer?: ApprovalsReviewer | null, sandbox?: SandboxMode | null, config?: { [key in string]?: JsonValue } | null, serviceName?: string | null, baseInstructions?: string | null, developerInstructions?: string | null, personality?: Personality | null, ephemeral?: boolean | null, sessionStartSource?: ThreadStartSource | null, /**
  * Optional client-supplied analytics source classification for this thread.
  */
-threadSource?: ThreadSource | null};
+threadSource?: ThreadSource | null, /**
+ * Optional Responses API `prompt_cache_key` for this thread's model
+ * requests. Threads started with the same key share prompt-cache routing.
+ * When omitted, the thread's session id is used. Must be non-empty after
+ * trimming and at most 256 characters. Not persisted: applies only to the
+ * thread started by this request.
+ */
+promptCacheKey?: string | null};
