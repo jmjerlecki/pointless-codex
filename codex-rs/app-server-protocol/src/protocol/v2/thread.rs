@@ -122,6 +122,13 @@ pub struct ThreadStartParams {
     /// Optional client-supplied analytics source classification for this thread.
     #[ts(optional = nullable)]
     pub thread_source: Option<ThreadSource>,
+    /// Optional Responses API `prompt_cache_key` for this thread's model
+    /// requests. Threads started with the same key share a prompt-cache key.
+    /// When omitted, the thread's session id is used. Must be non-empty after
+    /// trimming and at most 256 characters. Not persisted: applies only to the
+    /// thread started by this request.
+    #[ts(optional = nullable)]
+    pub prompt_cache_key: Option<String>,
     /// Optional project identity for this new thread. Durable threads persist
     /// the assignment; ephemeral threads expose it only in live responses.
     #[experimental("thread/start.projectId")]

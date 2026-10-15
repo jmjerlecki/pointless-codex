@@ -286,6 +286,9 @@ pub struct StartThreadOptions {
     pub thread_source: Option<ThreadSource>,
     pub dynamic_tools: Vec<codex_protocol::dynamic_tools::DynamicToolSpec>,
     pub metrics_service_name: Option<String>,
+    /// Client-supplied Responses `prompt_cache_key` for this thread only. `None` keeps the
+    /// default key derivation. Not inherited by spawned or resumed threads.
+    pub prompt_cache_key: Option<String>,
     pub parent_trace: Option<W3cTraceContext>,
     pub environments: Option<Vec<TurnEnvironmentRequest>>,
     /// Existing environment bindings captured by an internal caller.
@@ -315,6 +318,7 @@ impl StartThreadOptions {
             thread_source: None,
             dynamic_tools: Vec::new(),
             metrics_service_name: None,
+            prompt_cache_key: None,
             parent_trace: None,
             environments: None,
             inherited_environments: None,
@@ -2106,6 +2110,7 @@ impl ThreadManagerState {
             thread_source,
             dynamic_tools,
             metrics_service_name,
+            prompt_cache_key,
             parent_trace,
             environments: environment_requests,
             inherited_environments: captured_environments,
@@ -2353,6 +2358,7 @@ impl ThreadManagerState {
             agent_control,
             dynamic_tools,
             metrics_service_name,
+            prompt_cache_key,
             inherited_environments,
             inherited_exec_policy,
             parent_rollout_thread_trace,

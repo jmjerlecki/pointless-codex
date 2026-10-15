@@ -533,3 +533,11 @@ and out-of-scope item IDs return invalid params (`-32602`) with
 Omitted or null cursors preserve normal first-page behavior. Continue anchored
 pages with the returned opaque string `nextCursor`; response fields and
 `backwardsCursor` semantics are unchanged.
+
+# Pointless optional prompt cache key
+
+`thread/start` accepts optional `promptCacheKey`, a nonblank string of at most
+256 characters. It overrides the Responses prompt cache key for that new
+thread only. When omitted, native session-based cache routing is unchanged.
+The key is not persisted or inherited by resumed or spawned threads. Native
+guardian and ephemeral-fork cache routing retain precedence.

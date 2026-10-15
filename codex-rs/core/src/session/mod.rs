@@ -468,6 +468,8 @@ pub(crate) struct SessionSpawnArgs {
     pub(crate) agent_control: AgentControlInit,
     pub(crate) dynamic_tools: Vec<DynamicToolSpec>,
     pub(crate) metrics_service_name: Option<String>,
+    /// Client-supplied Responses `prompt_cache_key` override for this session only.
+    pub(crate) prompt_cache_key: Option<String>,
     pub(crate) inherited_exec_policy: Option<Arc<ExecPolicyManager>>,
     pub(crate) inherited_environments: Option<TurnEnvironmentSnapshot>,
     /// Parent rollout trace used only to derive fresh spawned child traces.
@@ -581,6 +583,7 @@ impl Session {
             agent_control,
             dynamic_tools,
             metrics_service_name,
+            prompt_cache_key,
             user_shell_override,
             inherited_exec_policy,
             inherited_environments,
@@ -944,6 +947,7 @@ impl Session {
             multi_agent_version,
             git_enrichment_policy,
             windows_sandbox_proxy_settings_mode,
+            prompt_cache_key,
         ))
         .await
         .map_err(|e| {
