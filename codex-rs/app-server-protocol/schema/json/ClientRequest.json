@@ -5473,6 +5473,13 @@
           ],
           "description": "@deprecated `friendly` and `pragmatic` no longer select a style."
         },
+        "promptCacheKey": {
+          "description": "Optional Responses API `prompt_cache_key` for this thread's model requests. Threads started with the same key share a prompt-cache key. When omitted, the thread's session id is used. Must be non-empty after trimming and at most 256 characters. Not persisted: applies only to the thread started by this request.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "sandbox": {
           "anyOf": [
             {

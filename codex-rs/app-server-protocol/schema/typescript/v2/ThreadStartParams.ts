@@ -19,4 +19,11 @@ approvalsReviewer?: ApprovalsReviewer | null, sandbox?: SandboxMode | null, conf
 personality?: Personality | null, ephemeral?: boolean | null, sessionStartSource?: ThreadStartSource | null, /**
  * Optional client-supplied analytics source classification for this thread.
  */
-threadSource?: ThreadSource | null};
+threadSource?: ThreadSource | null, /**
+ * Optional Responses API `prompt_cache_key` for this thread's model
+ * requests. Threads started with the same key share a prompt-cache key.
+ * When omitted, the thread's session id is used. Must be non-empty after
+ * trimming and at most 256 characters. Not persisted: applies only to the
+ * thread started by this request.
+ */
+promptCacheKey?: string | null};

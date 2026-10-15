@@ -10387,6 +10387,13 @@ class ThreadStartParams(BaseModel):
         Personality | None,
         Field(description="@deprecated `friendly` and `pragmatic` no longer select a style."),
     ] = None
+    prompt_cache_key: Annotated[
+        str | None,
+        Field(
+            alias="promptCacheKey",
+            description="Optional Responses API `prompt_cache_key` for this thread's model requests. Threads started with the same key share a prompt-cache key. When omitted, the thread's session id is used. Must be non-empty after trimming and at most 256 characters. Not persisted: applies only to the thread started by this request.",
+        ),
+    ] = None
     sandbox: SandboxMode | None = None
     service_name: Annotated[str | None, Field(alias="serviceName")] = None
     service_tier: Annotated[str | None, Field(alias="serviceTier")] = None
